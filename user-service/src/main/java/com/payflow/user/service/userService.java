@@ -1,4 +1,6 @@
 package com.payflow.user.service;
+import java.util.Optional;
+import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -6,6 +8,7 @@ import org.springframework.stereotype.Service;
 
 import com.payflow.user.model.user;
 import com.payflow.user.repository.userRepository;
+import com.payflow.user.utility.JwtUtility;
 
 @Service
 public class userService {
@@ -14,7 +17,9 @@ public class userService {
     private userRepository repo;
 
     private BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
-
+    
+    @Autowired
+    private JwtUtility jwtUtility;
 
     public user addUser(user u) throws Exception {
         //custom validations
@@ -28,6 +33,27 @@ public class userService {
         //save
         return repo.save(u);
     }
+
+    public List<user> getAllUsers(){
+        return repo.findAll();
+    }
+
+    public Optional<user> getUserById(String userId){
+        Long uId = Long.parseLong(userId);
+        return repo.findById(uId);
+    }
+
+    public String loginUser(String email, String password) throws Exception{
+        user u = repo.findByEmail(email).orElseThrow(()-> new Exception("User Not found"));
+    
+        if(!passwordEncoder.matches(password, u.getPasswordHash())){
+            throw new Exception("Invalid Password");
+        }
+
+        String token = jwtUtility.generateToken(u.getId(), u.getEmail());
+        return token;
+    }
+
 
     private void validatePassword(String password) throws Exception {
         System.out.println("Password received "+ password + " Length "+ password.length());
