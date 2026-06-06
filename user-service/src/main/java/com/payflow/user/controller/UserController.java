@@ -1,20 +1,23 @@
 package com.payflow.user.controller;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.ArrayList;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import com.payflow.user.dto.loginResponse;
+import com.payflow.user.dto.updateUserRequest;
 import com.payflow.user.dto.userRequest;
 import com.payflow.user.dto.userResponse;
 import com.payflow.user.model.user;
@@ -36,7 +39,7 @@ public class UserController {
      @Autowired
     private userRepository repo;
     
-    @PostMapping("/create-user")
+    @PostMapping("/auth/register")
     public ResponseEntity<?> registerUser(@Valid @RequestBody user u){
         try{
             user u1 = service.addUser(u);
@@ -49,8 +52,22 @@ public class UserController {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+    
+    @PostMapping("/auth/login")
+    public ResponseEntity<?> userLogin(@RequestBody userRequest loginRequest){
+        try{
+            String token = service.loginUser(loginRequest.getEmail(), loginRequest.getPassword());
+            user u = repo.findByEmail(loginRequest.getEmail()).get();
+            loginResponse response = new loginResponse(token, u.getEmail(), u.getId());
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        }catch(Exception e){
+            return new ResponseEntity<>(e.getMessage(),HttpStatus.UNAUTHORIZED);
+        }
+    }
 
-    @GetMapping("/users")
+
+
+    @GetMapping("/admin/users")
     public ResponseEntity<?> getAllUsers(){
         try{
             List<user> allUsers = new ArrayList<>();
@@ -72,16 +89,17 @@ public class UserController {
     }
     }
 
-    @PostMapping("/login")
-    public ResponseEntity<?> userLogin(@RequestBody userRequest loginRequest){
+
+    @PatchMapping("/users/{userId}")
+    public ResponseEntity<?> updateUser(@PathVariable Long userId, @RequestBody updateUserRequest updatedUser){
         try{
-            String token = service.loginUser(loginRequest.getEmail(), loginRequest.getPassword());
-            user u = repo.findByEmail(loginRequest.getEmail()).get();
-            loginResponse response = new loginResponse(token, u.getEmail(), u.getId());
-            return new ResponseEntity<>(response, HttpStatus.OK);
+            user newUser = service.updateUser(userId,updatedUser);
+            userResponse updatedUserResponse = new userResponse(newUser.getId(), newUser.getEmail());
+            return new ResponseEntity<>(updatedUserResponse, HttpStatus.OK);
         }catch(Exception e){
-            return new ResponseEntity<>(e.getMessage(),HttpStatus.UNAUTHORIZED);
+            return new ResponseEntity<>(e.getMessage(),HttpStatus.NOT_FOUND);
         }
     }
+    
 
 }
